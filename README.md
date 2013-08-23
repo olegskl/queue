@@ -1,15 +1,21 @@
-# queue.js #
+# queue #
 
 Asynchronous, single-worker, adjustable concurrency queue.
 
 ## Installation ##
 
-    git clone git://github.com/olegskl/queue.js.git
+    npm install git://github.com/olegskl/queue.git
+
+or in package.json as a dependency:
+
+    "dependencies": {
+        "queue": "git://github.com/olegskl/queue.git"
+    }
 
 ## Usage ##
 
     // Require the queue before use:
-    var queue = require('./queue.js');
+    var queue = require('queue');
 
 ### Run 1000 tasks with default concurrency (10) ###
 
@@ -26,7 +32,8 @@ Asynchronous, single-worker, adjustable concurrency queue.
         myQueue.add(i); // add value of i as task
     }
 
-    // Close the queue to 
+    // Close the queue to indicate that the callback is to be issued
+    // on the completion of the previously added tasks:
     myQueue.close();
 
 ## Test ##
