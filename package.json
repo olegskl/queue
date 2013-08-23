@@ -1,6 +1,7 @@
 {
     "name": "queue",
     "version": "0.1.0",
+    "main": "queue.js",
     "description": "Asynchronous, single-worker, adjustable concurrency queue.",
     "keywords": ["queue", "async", "flow", "concurrent"],
     "author": {
