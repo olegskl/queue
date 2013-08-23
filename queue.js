@@ -1,32 +1,37 @@
-// JSLint directives:
+/**
+ * @fileOverview Concurrent queue.
+ * @license The MIT License (MIT).
+ *    Copyright (c) 2012-2013 Oleg Sklyanchuk.
+ *    http://opensource.org/licenses/mit-license.html
+ * @author Oleg Sklyanchuk
+ */
+
 /*jslint node: true */
 
-// ECMAScript 5 strict mode:
 'use strict';
 
 /**
- * Default noop function.
- * @returns {undefined}
+ * The default noop function.
+ * @return {Undefined}
  */
-
-var noop = function () {};
+function noop() {}
 
 /**
  * Creates a new queue.
- * @param {Object} initalOptions Options object.
- * @returns {Function} A new queue function object.
+ * @param  {Object} initialOptions Initial queue configuration.
+ * @return {Object}                The created queue object.
  */
-
-exports.create = function (initialOptions) {
+module.exports = function (initialOptions) {
 
     var options = {
-            closed: false, // by default the queue is open
-            concurrency: 10, // task concurrency limir
+            concurrency: 10, // task concurrency limit
             worker: noop, // worker function to run for every queue item
             callback: noop // callback to issue on queue completion
         },
+        isClosed = false, // the queue is open once constructed
         items = [], // container of items to process
-        running = 0; // count of currently running items
+        running = 0, // count of currently running items
+        queue = {}; // the main API container to be returned by this constructor
 
     function work() {
 
@@ -49,10 +54,10 @@ exports.create = function (initialOptions) {
             // worker itself:
             if (err) {
                 // Stop accepting items:
-                options.closed = true;
+                isClosed = true;
                 // Clear the remaining items:
                 items = [];
-                // Issue final callback with the error 
+                // Issue final callback with the error:
                 options.callback(err);
                 return;
             }
@@ -63,7 +68,7 @@ exports.create = function (initialOptions) {
             // If the queue is closed, has no more items to process and no task
             // is running, consider the queue as finished and issue the final
             // callback; otherwise, proceed to the next task immediately:
-            if (options.closed && !items.length && !running) {
+            if (isClosed && !items.length && !running) {
                 options.callback();
             } else {
                 work();
@@ -72,57 +77,16 @@ exports.create = function (initialOptions) {
     }
 
     /**
-     * Primary API container.
-     */
-
-    function queue() {}
-
-    /**
-     * Options function getter/setter.
-     * @param [Object] newOptions Options to set.
-     * @returns {Function} A copy of the current options or the queue itself.
-     */
-
-    queue.options = function (newOptions) {
-        var optionName, // option name iterator
-            optionsCopy = {}; // container for a copy of the "options" object
-
-        // No arguments? Act as a getter:
-        if (arguments.length === 0) {
-            // Objects are passed by reference, so let's create a copy
-            // of the current "options" object and return it instead of the
-            // original to maintain encapsulation:
-            for (optionName in options) {
-                if (options.hasOwnProperty(optionName)) {
-                    optionsCopy[optionName] = options[optionName];
-                }
-            }
-            return optionsCopy;
-        }
-
-        // Got arguments? Act as a setter:
-        for (optionName in newOptions) {
-            if (newOptions.hasOwnProperty(optionName) &&
-                    typeof queue[optionName] === 'function' &&
-                    options.hasOwnProperty(optionName)) {
-                queue[optionName](newOptions[optionName]);
-            }
-        }
-
-        // Cascade the queue:
-        return queue;
-    };
-
-    /**
      * Worker function getter/setter.
-     * @param [Function] worker A worker function to set.
-     * @returns {Function} Current worker or the queue.
+     * @param   [Function]        worker A worker function to set.
+     * @returns {Function|Object}        Current worker or the queue.
      */
-
     queue.worker = function (worker) {
-        if (arguments.length === 0) {
+        // If no arguments are provided - act as a getter:
+        if (!arguments.length) {
             return options.worker;
         }
+        // Ignore non-function values:
         if (typeof worker === 'function') {
             options.worker = worker;
         }
@@ -132,14 +96,15 @@ exports.create = function (initialOptions) {
 
     /**
      * Callback function getter/setter.
-     * @param [Function] callback A callback function to set.
-     * @returns {Function} Current callback or the queue.
+     * @param   [Function] callback A callback function to set.
+     * @returns {Function}          Current callback or the queue.
      */
-
     queue.callback = function (callback) {
-        if (arguments.length === 0) {
+        // If no arguments are provided - act as a getter:
+        if (!arguments.length) {
             return options.callback;
         }
+        // Ignore non-function values:
         if (typeof callback === 'function') {
             options.callback = callback;
         }
@@ -149,14 +114,15 @@ exports.create = function (initialOptions) {
 
     /**
      * Concurrency level getter/setter.
-     * @param [Number] concurrency A concurrency level to set.
-     * @returns {Number|Function} Current concurrency level or the queue.
+     * @param   [Number]          concurrency A concurrency to set.
+     * @returns {Number|Function}             Current concurrency or the queue.
      */
-
     queue.concurrency = function (concurrency) {
-        if (arguments.length === 0) {
+        // If no arguments are provided - act as a getter:
+        if (!arguments.length) {
             return options.concurrency;
         }
+        // Ignore non-numerical values:
         if (typeof concurrency === 'number') {
             options.concurrency = concurrency;
         }
@@ -166,16 +132,15 @@ exports.create = function (initialOptions) {
 
     /**
      * Adds a new item to the queue.
-     * @param {Function} item A new item to add to the queue.
-     * @returns {Function} The queue.
+     * @param   {*}      item A new item to add to the queue.
+     * @returns {Object}      The queue.
      */
-
     queue.add = function (item) {
         // Ignore the add operation if the queue is closed:
-        if (!options.closed) {
-            // 
+        if (!isClosed) {
+            // Push the item to the end of the queue:
             items.push(item);
-            // 
+            // Invoke the worker on the next tick:
             process.nextTick(work);
         }
         // Cascade the queue:
@@ -185,9 +150,8 @@ exports.create = function (initialOptions) {
     /**
      * Clears the queue of any remaining items.
      * Any currently running tasks will complete regardless.
-     * @returns {Function} The queue.
+     * @returns {Object} The queue.
      */
-
     queue.clear = function () {
         // Clear the remaining items by resetting the "items" array:
         items = [];
@@ -199,10 +163,9 @@ exports.create = function (initialOptions) {
      * (Re-)opens the queue.
      * @returns {Function} The queue.
      */
-
     queue.open = function () {
         // Remove the "closed" flag to allow new items:
-        options.closed = false;
+        isClosed = false;
         // Restart the queue processing:
         process.nextTick(work);
         // Cascade the queue:
@@ -213,14 +176,60 @@ exports.create = function (initialOptions) {
      * Closes the queue.
      * @returns {Function} The queue.
      */
-
     queue.close = function () {
         // Set the "closed" flag to refuse new items:
-        options.closed = true;
+        isClosed = true;
+        // Closing a queue with no running tasks should result in the final
+        // callback being called with no error:
+        if (!running && !items.length) {
+            options.callback();
+        }
         // Cascade the queue:
         return queue;
     };
 
-    // Return the queue while assigning it the inital options:
-    return queue.options(initialOptions);
+    /**
+     * Tells if the queue is closed.
+     * @returns {Boolean} TRUE if closed, FALSE of open.
+     */
+    queue.isClosed = function () {
+        return isClosed;
+    };
+
+    /**
+     * Options getter/setter.
+     * @param  {Object} newOptions An object of options.
+     * @return {Object}            Current settings or the queue.
+     */
+    queue.options = function (newOptions) {
+
+        var optionKey,
+            optionsCopy = {};
+
+        // If no arguments are provided - act as a getter:
+        if (!arguments.length) {
+            // Ensure encapsulation by returning a shallow copy of the options:
+            for (optionKey in options) {
+                if (options.hasOwnProperty(optionKey)) {
+                    optionsCopy[optionKey] = options[optionKey];
+                }
+            }
+            return optionsCopy;
+        }
+
+        for (optionKey in options) {
+            if (options.hasOwnProperty(optionKey) &&
+                    newOptions.hasOwnProperty(optionKey)) {
+                queue[optionKey](newOptions[optionKey]);
+            }
+        }
+
+        // Cascade the queue:
+        return queue;
+    };
+
+    // Return the queue after assigning to it the inital options:
+    return (arguments.length)
+        ? queue.options(initialOptions)
+        : queue;
 };
