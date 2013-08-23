@@ -1,0 +1,25 @@
+{
+    "name": "queue",
+    "version": "0.1.0",
+    "description": "Asynchronous, single-worker, adjustable concurrency queue.",
+    "keywords": ["queue", "async", "flow", "concurrent"],
+    "author": {
+        "name": "Oleg Sklyanchuk",
+        "email": "sklyanchuk@gmail.com",
+        "url": "oregu.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/olegskl/queue.js.git"
+    },
+    "devDependencies": {
+        "mocha": "*"
+    },
+    "engines": {
+        "node": "*"
+    },
+    "scripts": {
+        "test": "make test"
+    },
+    "license": "MIT"
+}
