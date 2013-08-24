@@ -11,8 +11,9 @@
     },
     "repository": {
         "type": "git",
-        "url": "git://github.com/olegskl/queue.js.git"
+        "url": "git://github.com/olegskl/queue.git"
     },
+    "bugs": "http://github.com/olegskl/queue/issues",
     "devDependencies": {
         "mocha": "*"
     },
