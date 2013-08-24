@@ -29,34 +29,34 @@ module.exports = function (initialOptions) {
             callback: noop // callback to issue on queue completion
         },
         isClosed = false, // the queue is open once constructed
-        items = [], // container of items to process
-        running = 0, // count of currently running items
+        tasks = [], // container of tasks to process
+        running = 0, // count of currently running tasks
         queue = {}; // the main API container to be returned by this constructor
 
     function work() {
 
         // Abort when running at full capacity,
-        // or if there are no items to process:
-        if (running >= options.concurrency || !items.length) {
+        // or if there are no tasks to process:
+        if (running >= options.concurrency || !tasks.length) {
             return;
         }
 
-        // Keep track of the number of running items:
+        // Keep track of the number of running tasks:
         running += 1;
 
         // Invoke the working function by passing it as second parameter
         // a mandatory callback function that must be called upon completion
         // of a task so that the queue can proceed:
-        options.worker(items.shift(), function (err) {
+        options.worker(tasks.shift(), function (err) {
 
             // If any task returns an error - terminate the entire queue,
             // supposing that minor errors should be handled within the
             // worker itself:
             if (err) {
-                // Stop accepting items:
+                // Stop accepting tasks:
                 isClosed = true;
-                // Clear the remaining items:
-                items = [];
+                // Clear the remaining tasks:
+                tasks = [];
                 // Issue final callback with the error:
                 options.callback(err);
                 return;
@@ -65,10 +65,10 @@ module.exports = function (initialOptions) {
             // Keep track of the completed task:
             running -= 1;
 
-            // If the queue is closed, has no more items to process and no task
+            // If the queue is closed, has no more tasks to process and no task
             // is running, consider the queue as finished and issue the final
             // callback; otherwise, proceed to the next task immediately:
-            if (isClosed && !items.length && !running) {
+            if (isClosed && !tasks.length && !running) {
                 options.callback();
             } else {
                 work();
@@ -131,15 +131,15 @@ module.exports = function (initialOptions) {
     };
 
     /**
-     * Adds a new item to the queue.
-     * @param   {*}      item A new item to add to the queue.
+     * Adds a new task to the queue.
+     * @param   {*}      task A new task to add to the queue.
      * @returns {Object}      The queue.
      */
-    queue.add = function (item) {
+    queue.add = function (task) {
         // Ignore the add operation if the queue is closed:
         if (!isClosed) {
-            // Push the item to the end of the queue:
-            items.push(item);
+            // Push the task to the end of the queue:
+            tasks.push(task);
             // Invoke the worker on the next tick:
             process.nextTick(work);
         }
@@ -148,13 +148,13 @@ module.exports = function (initialOptions) {
     };
 
     /**
-     * Clears the queue of any remaining items.
+     * Clears the queue of any remaining tasks.
      * Any currently running tasks will complete regardless.
      * @returns {Object} The queue.
      */
     queue.clear = function () {
-        // Clear the remaining items by resetting the "items" array:
-        items = [];
+        // Clear the remaining tasks by resetting the "tasks" array:
+        tasks = [];
         // Cascade the queue:
         return queue;
     };
@@ -164,7 +164,7 @@ module.exports = function (initialOptions) {
      * @returns {Function} The queue.
      */
     queue.open = function () {
-        // Remove the "closed" flag to allow new items:
+        // Remove the "closed" flag to allow new tasks:
         isClosed = false;
         // Restart the queue processing:
         process.nextTick(work);
@@ -177,11 +177,11 @@ module.exports = function (initialOptions) {
      * @returns {Function} The queue.
      */
     queue.close = function () {
-        // Set the "closed" flag to refuse new items:
+        // Set the "closed" flag to refuse new tasks:
         isClosed = true;
         // Closing a queue with no running tasks should result in the final
         // callback being called with no error:
-        if (!running && !items.length) {
+        if (!running && !tasks.length) {
             options.callback();
         }
         // Cascade the queue:
