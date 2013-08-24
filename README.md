@@ -38,14 +38,17 @@ or in package.json as a dependency:
 
 ## Test ##
 
-If Mocha is installed, simply:
-
-    mocha
-
-Otherwise:
+If [Mocha](https://github.com/visionmedia/mocha) is not installed:
 
     npm install
+
+Use any of the following to run the test suite:
+
+    mocha
+<!-- -->
     npm test
+<!-- -->
+    make test
 
 ## License ##
 
